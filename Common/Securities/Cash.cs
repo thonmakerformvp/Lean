@@ -1,11 +1,11 @@
 /*
  * QUANTCONNECT.COM - Democratizing Finance, Empowering Individuals.
  * Lean Algorithmic Trading Engine v2.0. Copyright 2014 QuantConnect Corporation.
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -84,7 +84,7 @@ namespace QuantConnect.Securities
         public void Update(BaseData data)
         {
             if (_isBaseCurrency) return;
-            
+
             var rate = data.Value;
             if (_invertRealTimePrice)
             {
@@ -140,7 +140,7 @@ namespace QuantConnect.Securities
                 ConversionRate = 1.0m;
                 return null;
             }
-            
+
             // we require a subscription that converts this into the base currency
             string normal = Symbol + CashBook.AccountCurrency;
             string invert = CashBook.AccountCurrency + Symbol;
@@ -214,7 +214,9 @@ namespace QuantConnect.Securities
                     return security;
                 }
             }
-            
+
+            // if this still hasn't been set then it's an error condition
+            throw new ArgumentException(string.Format("In order to maintain cash in {0} you are required to add a subscription for Forex pair {0}{1} or {1}{0}", Symbol, CashBook.AccountCurrency));
         }
 
         /// <summary>
@@ -226,13 +228,24 @@ namespace QuantConnect.Securities
             // round the conversion rate for output
             decimal rate = ConversionRate;
             rate = rate < 1000 ? rate.RoundToSignificantDigits(5) : Math.Round(rate, 2);
-            return string.Format("{0}: {1,15} @ ${2,10} = {3}{4}", 
-                Symbol, 
-                Amount.ToString("0.00"), 
-                rate.ToString("0.00####"), 
-                Currencies.GetCurrencySymbol(Symbol), 
+            return string.Format("{0}: {1,15} @ ${2,10} = {3}{4}",
+                Symbol,
+                Amount.ToString("0.00"),
+                rate.ToString("0.00####"),
+                Currencies.GetCurrencySymbol(Symbol),
                 Math.Round(ValueInAccountCurrency, 2)
                 );
+        }
+
+        private static Symbol CreateSymbol(IReadOnlyDictionary<SecurityType, string> marketMap, string crypto, Dictionary<SecurityType, string> markets, SecurityType securityType)
+        {
+            string market;
+            if (!markets.TryGetValue(securityType, out market))
+            {
+                market = marketMap[securityType];
+            }
+
+            return QuantConnect.Symbol.Create(crypto, securityType, market);
         }
     }
 }
